@@ -19,18 +19,19 @@ def get_base64_of_local_image(image_path):
 # Convert Background.jpeg to base64 string
 bin_str = get_base64_of_local_image("Background.jpeg")
 
-# --- INJECT CUSTOM CSS FOR BACKGROUND ---
+# --- INJECT CUSTOM CSS FOR DARKENED BACKGROUND ---
 if bin_str:
+    # Adding a 70% dark linear gradient overlay over the background image
     page_bg_img = f"""
     <style>
     [data-testid="stAppViewContainer"] {{
-        background-image: url("data:image/jpeg;base64,{bin_str}");
+        background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url("data:image/jpeg;base64,{bin_str}");
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
         background-attachment: fixed;
     }}
-    /* Make headers and background containers legible over custom images */
+    /* Keep the header transparent */
     [data-testid="stHeader"] {{
         background: rgba(0,0,0,0);
     }}
@@ -51,7 +52,6 @@ if 'last_block_count' not in st.session_state:
 
 # Function to pull ALL data from Firebase without any filters
 def fetch_all_data():
-    # Pass auth inside params just like MIT App Inventor URL setup
     params = {
         "auth": FIREBASE_AUTH
     }
@@ -80,10 +80,9 @@ if data_json:
     # 1. ORGANIZE JSON DATA INTO A PYTHON LIST
     blocks_list = []
     
-    # Handle both list and dict structures from Firebase safely
     if isinstance(data_json, list):
         for idx, block_content in enumerate(data_json):
-            if block_content: # Skip null entries if any
+            if block_content: 
                 block_content['node_name'] = f"Block_{idx}"
                 blocks_list.append(block_content)
     elif isinstance(data_json, dict):
@@ -93,7 +92,6 @@ if data_json:
                 blocks_list.append(block_content)
 
     if blocks_list:
-        # Sort blocks by index descending so the latest block is always at the top
         blocks_list = sorted(blocks_list, key=lambda x: x.get('index', 0), reverse=True)
         
         latest_block = blocks_list[0]
@@ -101,7 +99,6 @@ if data_json:
         
         current_block_count = len(blocks_list)
 
-        # Smart Toast Alert: Triggers only when the database size increases
         if current_block_count > st.session_state.last_block_count and st.session_state.last_block_count != 0:
             st.toast(f"🔔 New Block Minted! Total Blocks: {current_block_count}", icon="ℹ️")
         st.session_state.last_block_count = current_block_count
