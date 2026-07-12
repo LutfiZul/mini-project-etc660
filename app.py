@@ -101,21 +101,21 @@ live_telemetry = fetch_live_telemetry()
 st.sidebar.markdown("## 🔒 Nexus Shield Auth")
 
 if not st.session_state.authenticated:
-    st.sidebar.info("Sila log in untuk melihat Ledger Blockchain.")
+    st.sidebar.info("Please sign in to access the Secure Blockchain Ledger Logs.")
     user_select = st.sidebar.selectbox("Security Personnel", ["Lutfi", "Thia", "Raziq"])
-    input_password = st.sidebar.text_input("Access Password", type="password", placeholder="Kata laluan")
+    input_password = st.sidebar.text_input("Access Password", type="password", placeholder="Enter credentials")
     
     if st.sidebar.button("Authenticate Identity", use_container_width=True):
         if input_password == "nexus2026":
             st.session_state.authenticated = True
             st.session_state.user_logged_in = user_select
-            st.sidebar.success(f"Welcome, {user_select}!")
+            st.sidebar.success(f"Welcome back, Operator {user_select}!")
             time.sleep(0.5)
             st.rerun()
         else:
-            st.sidebar.error("Password Salah!")
+            st.sidebar.error("Invalid Security Token Password!")
 else:
-    st.sidebar.success(f"🟢 Logged in: {st.session_state.user_logged_in}")
+    st.sidebar.success(f"🟢 Authenticated: {st.session_state.user_logged_in}")
     if st.sidebar.button("Log Out 🔓", use_container_width=True):
         st.session_state.authenticated = False
         st.session_state.user_logged_in = ""
@@ -228,7 +228,7 @@ if st.session_state.authenticated:
     else:
         st.info("Connecting to secure blockchain cluster nodes...")
 else:
-    st.warning("🔒 Sila log in melalui panel sebelah kiri untuk mengakses Data Ringkasan Blockchain Ledger.")
+    st.warning("🔒 Restricted Console Area. Please authenticate identity parameters via the sidebar menu to unlock cryptographic network transaction histories.")
 
 # 4. BACKGROUND REFRESH CONTROLLER
 time.sleep(2)
