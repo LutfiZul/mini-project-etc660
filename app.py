@@ -3,9 +3,40 @@ import requests
 import pandas as pd
 from datetime import datetime
 import time
+import base64
+import os
 
 # Set page layout configuration
 st.set_page_config(page_title="Nexus Shield Dashboard", page_icon="🚗", layout="wide")
+
+# --- FUNCTION TO CONVERT LOCAL IMAGE TO BASE64 ---
+def get_base64_of_local_image(image_path):
+    if os.path.exists(image_path):
+        with open(image_path, "rb") as img_file:
+            return base64.b64encode(img_file.read()).decode()
+    return ""
+
+# Convert Background.jpeg to base64 string
+bin_str = get_base64_of_local_image("Background.jpeg")
+
+# --- INJECT CUSTOM CSS FOR BACKGROUND ---
+if bin_str:
+    page_bg_img = f"""
+    <style>
+    [data-testid="stAppViewContainer"] {{
+        background-image: url("data:image/jpeg;base64,{bin_str}");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+    }}
+    /* Make headers and background containers legible over custom images */
+    [data-testid="stHeader"] {{
+        background: rgba(0,0,0,0);
+    }}
+    </style>
+    """
+    st.markdown(page_bg_img, unsafe_allow_html=True)
 
 st.title("🛡️ Nexus Shield - Smart Parking Blockchain Dashboard")
 st.subheader("Real-Time Blockchain Ledger & Parking Status Monitoring")
