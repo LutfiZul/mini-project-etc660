@@ -113,24 +113,24 @@ with col_auth_status:
 st.markdown("---")
 
 # --- PUBLIC SECTION: ACCESSIBLE TO EVERYONE ---
-st.subheader("📊 Live Parking Status Grid (P1 - P200)")
+st.subheader("📊 Live Parking Status Grid (P1 - P50)")
 
 if live_telemetry and "status" in live_telemetry:
     p1_status = live_telemetry["status"]
 else:
     p1_status = "AVAIL"
 
-# Calculate simple counters for presentation metrics
+# Calculate counters based on 50 capacity limit
 occupied_count = 1 if p1_status == "OCCU" else 0
-# Simulating a realistic filled lot distribution where P2-P200 have certain spots occupied
-simulated_occu_slots = {2, 5, 12, 18, 24, 35, 42, 57, 73, 88, 91, 104, 119, 134, 152, 167, 185, 199}
+# Simulating filled spots evenly across 50 slots for demonstration
+simulated_occu_slots = {2, 5, 12, 18, 24, 35, 42}
 total_occupied = occupied_count + len(simulated_occu_slots)
-total_available = 200 - total_occupied
+total_available = 50 - total_occupied
 
 # Summary Dashboard Metrics
 m_col1, m_col2, m_col3 = st.columns(3)
 with m_col1:
-    st.metric("Total Capacity", "200 Slots")
+    st.metric("Total Capacity", "50 Slots")
 with m_col2:
     st.metric("Occupied Lots", f"{total_occupied} Slots")
 with m_col3:
@@ -138,9 +138,9 @@ with m_col3:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# 🏢 GENERATE GRID LAYOUT (10 COLUMNS PER ROW)
+# 🏢 GENERATE 5x10 GRID LAYOUT (10 COLUMNS PER ROW)
 cols_per_row = 10
-for row_idx in range(0, 200, cols_per_row):
+for row_idx in range(0, 50, cols_per_row):
     grid_cols = st.columns(cols_per_row)
     for col_idx in range(cols_per_row):
         slot_number = row_idx + col_idx + 1
