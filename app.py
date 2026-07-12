@@ -44,17 +44,16 @@ st.subheader("Real-Time Blockchain Ledger & Parking Status Monitoring")
 
 # Firebase Configuration Setup
 FIREBASE_URL = "https://smart-parking-blockchain-default-rtdb.asia-southeast1.firebasedatabase.app/BlockchainLedger.json"
+TELEMETRY_URL = "https://smart-parking-blockchain-default-rtdb.asia-southeast1.firebasedatabase.app/LiveTelemetry.json"
 FIREBASE_AUTH = "KtYk6rkMY0IHHO6711hEZfqYZTLuFPHepzBopnIB"
 
 # Initialize session state to store the last known block index count
 if 'last_block_count' not in st.session_state:
     st.session_state.last_block_count = 0
 
-# Function to pull ALL data from Firebase without any filters
+# Function to pull ALL blockchain data from Firebase
 def fetch_all_data():
-    params = {
-        "auth": FIREBASE_AUTH
-    }
+    params = {"auth": FIREBASE_AUTH}
     try:
         response = requests.get(FIREBASE_URL, params=params)
         if response.status_code == 200 and response.json():
@@ -63,7 +62,18 @@ def fetch_all_data():
     except Exception as e:
         return None
 
-# Function to parse data payload string (Extracts CardUID, Slot, PIR)
+# Function to pull live status telemetry data from Firebase
+def fetch_live_telemetry():
+    params = {"auth": FIREBASE_AUTH}
+    try:
+        response = requests.get(TELEMETRY_URL, params=params)
+        if response.status_code == 200 and response.json():
+            return response.json()
+        return None
+    except Exception as e:
+        return None
+
+# Function to parse data payload string fallback if telemetry fails
 def parse_slot_status(payload_str):
     status = "UNKNOWN"
     if "Slot:" in payload_str:
@@ -73,8 +83,9 @@ def parse_slot_status(payload_str):
                 status = part.split(':')[1].strip()
     return status
 
-# Fetch all historical and live data from Firebase
+# Fetch both historical blockchain blocks and real-time live telemetry
 data_json = fetch_all_data()
+live_telemetry = fetch_live_telemetry()
 
 if data_json:
     # 1. ORGANIZE JSON DATA INTO A PYTHON LIST
@@ -95,10 +106,9 @@ if data_json:
         blocks_list = sorted(blocks_list, key=lambda x: x.get('index', 0), reverse=True)
         
         latest_block = blocks_list[0]
-        existing_block = blocks_list[1] if len(blocks_list) > 1 else latest_block
-        
         current_block_count = len(blocks_list)
 
+        # Smart Toast Alert: Triggers only when the database size increases
         if current_block_count > st.session_state.last_block_count and st.session_state.last_block_count != 0:
             st.toast(f"🔔 New Block Minted! Total Blocks: {current_block_count}", icon="ℹ️")
         st.session_state.last_block_count = current_block_count
@@ -106,26 +116,24 @@ if data_json:
         # 2. DISPLAY STATUS METRICS SIDE-BY-SIDE
         col1, col2 = st.columns(2)
         
-        latest_status = parse_slot_status(latest_block.get('data', ''))
-        existing_status = parse_slot_status(existing_block.get('data', ''))
+        # Get live status directly from the new telemetry data branch
+        if live_telemetry and "status" in live_telemetry:
+            live_status = live_telemetry["status"]
+        else:
+            live_status = parse_slot_status(latest_block.get('data', ''))
 
         with col1:
-            st.subheader(f"🔄 Current Existing Status ({existing_block.get('node_name')})")
-            if existing_status == "AVAIL":
+            st.subheader("🔄 Live Parking Status Monitoring")
+            if live_status == "AVAIL":
                 st.success("🟢 SLOT P1: AVAILABLE")
-            elif existing_status == "OCCU":
+            elif live_status == "OCCU":
                 st.error("🔴 SLOT P1: OCCUPIED")
             else:
-                st.warning(f"🟡 STATUS: {existing_status}")
+                st.warning(f"🟡 STATUS: {live_status}")
                 
         with col2:
-            st.subheader(f"⚡ Latest Updated Status ({latest_block.get('node_name')})")
-            if latest_status == "AVAIL":
-                st.success("🟢 SLOT P1: AVAILABLE")
-            elif latest_status == "OCCU":
-                st.error("🔴 SLOT P1: OCCUPIED")
-            else:
-                st.warning(f"🟡 STATUS: {latest_status}")
+            st.subheader("⚡ Last Ledger Action Type")
+            st.info(f"📋 {latest_block.get('tx_type', 'NONE')} ({latest_block.get('node_name', 'N/A')})")
 
         st.markdown("---")
         
