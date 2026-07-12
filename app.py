@@ -18,15 +18,17 @@ FIREBASE_AUTH = "KtYk6rkMY0IHHO6711hEZfqYZTLuFPHepzBopnIB"
 if 'last_block_index' not in st.session_state:
     st.session_state.last_block_index = -1
 
-# Function to pull data from Firebase (fetches the last 5 blocks)
+# Function to pull data from Firebase using secure Request Headers
 def fetch_latest_data():
+    headers = {
+        "Authorization": f"Bearer {FIREBASE_AUTH}"
+    }
     params = {
         "orderBy": '"index"',
-        "limitToLast": 5,
-        "auth": FIREBASE_AUTH
+        "limitToLast": 5
     }
     try:
-        response = requests.get(FIREBASE_URL, params=params)
+        response = requests.get(FIREBASE_URL, params=params, headers=headers)
         if response.status_code == 200 and response.json():
             return response.json()
         return None
@@ -93,12 +95,12 @@ if data_json:
 
     st.markdown("---")
     
-    # 3. BLOCKCHAIN LEDGER AUDIT TRAIL DATA GRID JADUAL
+    # 3. BLOCKCHAIN LEDGER AUDIT TRAIL DATA GRID
     st.subheader("📜 Blockchain Ledger Logs (Audit Trail)")
     table_data = []
     for b in blocks_list:
         ms = b.get('timestamp_realtime', 0)
-        # Convert Epoch Milliseconds to Malaysia Local Standard Time (24-Hour Format Display)
+        # Convert Epoch Milliseconds to Malaysia Local Standard Time
         t_time = datetime.fromtimestamp(ms / 1000.0).strftime('%d/%m/%Y %I:%M:%S %p') if ms else "N/A"
         
         table_data.append({
