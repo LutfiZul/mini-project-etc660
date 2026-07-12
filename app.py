@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 import base64
 import os
@@ -21,7 +21,6 @@ bin_str = get_base64_of_local_image("Background.jpeg")
 
 # --- INJECT CUSTOM CSS FOR DARKENED BACKGROUND ---
 if bin_str:
-    # Adding a 70% dark linear gradient overlay over the background image
     page_bg_img = f"""
     <style>
     [data-testid="stAppViewContainer"] {{
@@ -31,7 +30,6 @@ if bin_str:
         background-repeat: no-repeat;
         background-attachment: fixed;
     }}
-    /* Keep the header transparent */
     [data-testid="stHeader"] {{
         background: rgba(0,0,0,0);
     }}
@@ -116,7 +114,6 @@ if data_json:
         # 2. DISPLAY STATUS METRICS SIDE-BY-SIDE
         col1, col2 = st.columns(2)
         
-        # Get live status directly from the new telemetry data branch
         if live_telemetry and "status" in live_telemetry:
             live_status = live_telemetry["status"]
         else:
@@ -142,7 +139,16 @@ if data_json:
         table_data = []
         for b in blocks_list:
             ms = b.get('timestamp_realtime', 0)
-            t_time = datetime.fromtimestamp(ms / 1000.0).strftime('%d/%m/%Y %I:%M:%S %p') if ms else "N/A"
+            
+            # 🔴 TIMEZONE CORRECTION APPLIED HERE
+            if ms:
+                # Convert epoch timestamp to baseline datetime object
+                utc_time = datetime.fromtimestamp(ms / 1000.0)
+                # Force addition of +8 hours shift to align perfectly with Malaysian Time (MYT)
+                myt_time = utc_time + timedelta(hours=8)
+                t_time = myt_time.strftime('%d/%m/%Y %I:%M:%S %p')
+            else:
+                t_time = "N/A"
             
             table_data.append({
                 "Parent Node": b.get('node_name'),
