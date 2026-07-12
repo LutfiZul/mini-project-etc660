@@ -97,19 +97,33 @@ def parse_slot_status(payload_str):
 data_json = fetch_all_data()
 live_telemetry = fetch_live_telemetry()
 
-# --- HEADER TITLE SECTION ---
-col_title, col_auth_status = st.columns([5, 2])
-with col_title:
-    st.title("🛡️ Nexus Shield - Smart Parking Dashboard")
-with col_auth_status:
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.session_state.authenticated:
-        st.write(f"Logged in as: **{st.session_state.user_logged_in}**")
-        if st.button("Log Out 🔓", use_container_width=True):
-            st.session_state.authenticated = False
-            st.session_state.user_logged_in = ""
-            st.rerun()
+# --- SIDEBAR AUTHENTICATION INTERFACE (UPPER LEFT) ---
+st.sidebar.markdown("## 🔒 Nexus Shield Auth")
 
+if not st.session_state.authenticated:
+    st.sidebar.info("Sila log in untuk melihat Ledger Blockchain.")
+    user_select = st.sidebar.selectbox("Security Personnel", ["Lutfi", "Thia", "Raziq"])
+    input_password = st.sidebar.text_input("Access Password", type="password", placeholder="Kata laluan")
+    
+    if st.sidebar.button("Authenticate Identity", use_container_width=True):
+        if input_password == "nexus2026":
+            st.session_state.authenticated = True
+            st.session_state.user_logged_in = user_select
+            st.sidebar.success(f"Welcome, {user_select}!")
+            time.sleep(0.5)
+            st.rerun()
+        else:
+            st.sidebar.error("Password Salah!")
+else:
+    st.sidebar.success(f"🟢 Logged in: {st.session_state.user_logged_in}")
+    if st.sidebar.button("Log Out 🔓", use_container_width=True):
+        st.session_state.authenticated = False
+        st.session_state.user_logged_in = ""
+        st.rerun()
+
+
+# --- MAIN UI DISPLAY ---
+st.title("🛡️ Nexus Shield - Smart Parking Dashboard")
 st.markdown("---")
 
 # --- PUBLIC SECTION: ACCESSIBLE TO EVERYONE ---
@@ -120,11 +134,17 @@ if live_telemetry and "status" in live_telemetry:
 else:
     p1_status = "AVAIL"
 
-# Calculate counters based on 50 capacity limit
-occupied_count = 1 if p1_status == "OCCU" else 0
-# Simulating filled spots evenly across 50 slots for demonstration
+# 1. Base simulated occupied slots (Excluding P1 entirely)
 simulated_occu_slots = {2, 5, 12, 18, 24, 35, 42}
-total_occupied = occupied_count + len(simulated_occu_slots)
+
+# 2. Dynamic check for Live Slot 1
+if p1_status == "OCCU":
+    active_occupied_set = simulated_occu_slots.union({1})
+else:
+    active_occupied_set = simulated_occu_slots
+
+# Calculate counters based on the active set
+total_occupied = len(active_occupied_set)
 total_available = 50 - total_occupied
 
 # Summary Dashboard Metrics
@@ -138,24 +158,17 @@ with m_col3:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# 🏢 GENERATE 5x10 GRID LAYOUT (10 COLUMNS PER ROW)
+# 🏢 GENERATE 5x10 GRID LAYOUT
 cols_per_row = 10
 for row_idx in range(0, 50, cols_per_row):
     grid_cols = st.columns(cols_per_row)
     for col_idx in range(cols_per_row):
         slot_number = row_idx + col_idx + 1
         
-        # Determine status for slot element
-        if slot_number == 1:
-            is_occupied = (p1_status == "OCCU")
-            label = "P1 (LIVE)"
-        else:
-            is_occupied = (slot_number in simulated_occu_slots)
-            label = f"P{slot_number}"
+        label = "P1 (LIVE)" if slot_number == 1 else f"P{slot_number}"
             
-        # Inject matching styled block into column slot
         with grid_cols[col_idx]:
-            if is_occupied:
+            if slot_number in active_occupied_set:
                 st.markdown(f"<div class='parking-block occu-block'>🔴 {label}<br>OCCUPIED</div>", unsafe_allow_html=True)
             else:
                 st.markdown(f"<div class='parking-block avail-block'>🟢 {label}<br>AVAILABLE</div>", unsafe_allow_html=True)
@@ -165,7 +178,7 @@ st.markdown("---")
 # --- CONDITIONAL DISPLAY SECTION ---
 if st.session_state.authenticated:
     # --- PRIVATE ADMIN VIEW: BLOCKCHAIN AUDIT LOGS ---
-    st.subheader("🔒 Secure Blockchain Ledger Audits")
+    st.subheader("📜 Secure Blockchain Ledger Audits")
     
     if data_json:
         blocks_list = []
@@ -214,32 +227,8 @@ if st.session_state.authenticated:
             st.info("Ledger tree contains no block elements.")
     else:
         st.info("Connecting to secure blockchain cluster nodes...")
-
 else:
-    # --- LOGIN OVERLAY GATEWAY FOR UNVERIFIED USERS ---
-    col_l1, col_l2, col_l3 = st.columns([1, 1.5, 1])
-    with col_l2:
-        st.markdown("""
-            <div style='background-color: rgba(255,255,255,0.02); padding: 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); text-align: center;'>
-                <span style='font-size: 24px;'>🔑</span>
-                <h4 style='color: white; margin-top: 10px;'>Review Cryptographic Cryptoledger</h4>
-                <p style='color: #8c8c8c; font-size: 13px;'>Sign in as authorized personnel to browse transactional node payload logs.</p>
-            </div>
-        """, unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        user_select = st.selectbox("Select Security Personnel", ["Lutfi", "Thia", "Raziq"])
-        input_password = st.text_input("Security Access Password", type="password", placeholder="Enter credentials")
-        
-        if st.button("Authenticate Identity", use_container_width=True):
-            if input_password == "nexus2026":
-                st.session_state.authenticated = True
-                st.session_state.user_logged_in = user_select
-                st.success(f"Welcome back, Operator {user_select}! Accessing ledger...")
-                time.sleep(1)
-                st.rerun()
-            else:
-                st.error("Authentication handshake failed. Access Denied.")
+    st.warning("🔒 Sila log in melalui panel sebelah kiri untuk mengakses Data Ringkasan Blockchain Ledger.")
 
 # 4. BACKGROUND REFRESH CONTROLLER
 time.sleep(2)
