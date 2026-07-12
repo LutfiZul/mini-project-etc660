@@ -39,6 +39,18 @@ if bin_str:
     [data-testid="stHeader"] {{
         background: rgba(0,0,0,0);
     }}
+    /* Style for compact parking grid blocks */
+    .parking-block {{
+        padding: 10px;
+        border-radius: 5px;
+        text-align: center;
+        font-weight: bold;
+        font-size: 14px;
+        margin-bottom: 10px;
+        color: white;
+    }}
+    .avail-block {{ background-color: rgba(40, 167, 69, 0.2); border: 1px solid #28a745; }}
+    .occu-block {{ background-color: rgba(220, 53, 69, 0.2); border: 1px solid #dc3545; }}
     </style>
     """
     st.markdown(page_bg_img, unsafe_allow_html=True)
@@ -48,7 +60,6 @@ FIREBASE_URL = "https://smart-parking-blockchain-default-rtdb.asia-southeast1.fi
 TELEMETRY_URL = "https://smart-parking-blockchain-default-rtdb.asia-southeast1.firebasedatabase.app/LiveTelemetry.json"
 FIREBASE_AUTH = "KtYk6rkMY0IHHO6711hEZfqYZTLuFPHepzBopnIB"
 
-# Initialize session state to store the last known block index count
 if 'last_block_count' not in st.session_state:
     st.session_state.last_block_count = 0
 
@@ -102,28 +113,52 @@ with col_auth_status:
 st.markdown("---")
 
 # --- PUBLIC SECTION: ACCESSIBLE TO EVERYONE ---
-st.subheader("📊 Public Live Parking Status Monitoring")
+st.subheader("📊 Live Parking Status Grid (P1 - P200)")
 
 if live_telemetry and "status" in live_telemetry:
-    live_status = live_telemetry["status"]
+    p1_status = live_telemetry["status"]
 else:
-    # Fallback to blockchain if telemetry branch is booting up
-    if data_json:
-        if isinstance(data_json, list) and data_json[-1]:
-            live_status = parse_slot_status(data_json[-1].get('data', ''))
-        elif isinstance(data_json, dict):
-            latest_key = sorted(data_json.keys())[-1]
-            live_status = parse_slot_status(data_json[latest_key].get('data', ''))
-    else:
-        live_status = "UNKNOWN"
+    p1_status = "AVAIL"
 
-# Render large public status card
-if live_status == "AVAIL":
-    st.success("🟢 SLOT P1: AVAILABLE")
-elif live_status == "OCCU":
-    st.error("🔴 SLOT P1: OCCUPIED")
-else:
-    st.warning(f"🟡 STATUS: {live_status}")
+# Calculate simple counters for presentation metrics
+occupied_count = 1 if p1_status == "OCCU" else 0
+# Simulating a realistic filled lot distribution where P2-P200 have certain spots occupied
+simulated_occu_slots = {2, 5, 12, 18, 24, 35, 42, 57, 73, 88, 91, 104, 119, 134, 152, 167, 185, 199}
+total_occupied = occupied_count + len(simulated_occu_slots)
+total_available = 200 - total_occupied
+
+# Summary Dashboard Metrics
+m_col1, m_col2, m_col3 = st.columns(3)
+with m_col1:
+    st.metric("Total Capacity", "200 Slots")
+with m_col2:
+    st.metric("Occupied Lots", f"{total_occupied} Slots")
+with m_col3:
+    st.metric("Available Lots", f"{total_available} Slots")
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# 🏢 GENERATE GRID LAYOUT (10 COLUMNS PER ROW)
+cols_per_row = 10
+for row_idx in range(0, 200, cols_per_row):
+    grid_cols = st.columns(cols_per_row)
+    for col_idx in range(cols_per_row):
+        slot_number = row_idx + col_idx + 1
+        
+        # Determine status for slot element
+        if slot_number == 1:
+            is_occupied = (p1_status == "OCCU")
+            label = "P1 (LIVE)"
+        else:
+            is_occupied = (slot_number in simulated_occu_slots)
+            label = f"P{slot_number}"
+            
+        # Inject matching styled block into column slot
+        with grid_cols[col_idx]:
+            if is_occupied:
+                st.markdown(f"<div class='parking-block occu-block'>🔴 {label}<br>OCCUPIED</div>", unsafe_allow_html=True)
+            else:
+                st.markdown(f"<div class='parking-block avail-block'>🟢 {label}<br>AVAILABLE</div>", unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -193,7 +228,6 @@ else:
         """, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # User dropdown profile matching allowed list values
         user_select = st.selectbox("Select Security Personnel", ["Lutfi", "Thia", "Raziq"])
         input_password = st.text_input("Security Access Password", type="password", placeholder="Enter credentials")
         
